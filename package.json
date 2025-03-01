@@ -4,8 +4,8 @@
   "description": "",
   "main": "dist/server.js",
   "engines": {
-    "node": ">= 20.17.0",
-    "npm": ">= 10.8.2"
+    "node": "20.x",
+    "npm": "10.x"
   },
   "scripts": {
     "check-node-version": "node scripts/check-node-version.js",
