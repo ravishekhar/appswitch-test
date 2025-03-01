@@ -23,25 +23,12 @@ async function createOrderHandler(
     payment_source: {
       paypal: {
         description: "Description for PayPal to be shown to PayPal payer",
-        shipping: {
-          name: {
-            full_name: "John Doe",
-          },
-          address: {
-            address_line_1: "2211 N First Street",
-            address_line_2: "Building 17",
-            admin_area_2: "San Jose",
-            admin_area_1: "CA",
-            postal_code: "95131",
-            country_code: "US",
-          },
-        },
         permit_multiple_payment_tokens: true,
         usage_pattern: "IMMEDIATE",
         usage_type: "MERCHANT",
         customer_type: "CONSUMER",
         experience_context: {
-          shipping_preference: "SET_PROVIDED_ADDRESS",
+          shipping_preference: "NO_SHIPPING",
           payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
           brand_name: "EXAMPLE INC",
           locale: "en-US",

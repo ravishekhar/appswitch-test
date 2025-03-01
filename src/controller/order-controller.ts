@@ -91,11 +91,6 @@ async function createOrderHandler(
               currency_code: currency,
               value: String(itemTotal),
             },
-            shipping: {
-              // Can be omitted if none
-              currency_code: currency,
-              value: String(shippingTotal),
-            },
             tax_total: {
               // Can be omitted if none
               currency_code: currency,
@@ -119,7 +114,7 @@ async function createOrderHandler(
         experience_context: {
           return_url: onApproveUrl,
           cancel_url: onCancelUrl,
-          shipping_preference: "GET_FROM_FILE",
+          shipping_preference: "NO_SHIPPING",
         },
       },
     },
