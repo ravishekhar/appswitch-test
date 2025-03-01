@@ -48,7 +48,8 @@
 
     loadPayPalSDK().then(() => {
         const buttons = window.paypal.Buttons({
-
+            appSwitchWhenAvailable: true,
+            fundingSource: window.paypal.FUNDING.PAYPAL,
             createVaultSetupToken() {
                 if (!document.getElementById("buyerEmail").value) {
                     resultMessage("Buyer email must be provided")

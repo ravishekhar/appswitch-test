@@ -3,7 +3,7 @@
     "sku": "1blwyeo8",
     "name": "Potted Plant",
     "description": "A leafy green plant in pot.",
-    "price": "50.75",
+    "price": "1.00",
     "category": "PHYSICAL_GOODS",
     "stock": 2,
     "image": "🪴"
@@ -12,7 +12,7 @@
     "sku": "i5b1g92y",
     "name": "Seedling",
     "description": "A seedling, or a young plant, as a newly sprouted tree.",
-    "price": "25.20",
+    "price": "1.20",
     "category": "PHYSICAL_GOODS",
     "stock": 10,
     "image": "🌱"

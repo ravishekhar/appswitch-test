@@ -48,6 +48,8 @@
 
     loadPayPalSDK().then(() => {
         const buttons = window.paypal.Buttons({
+            appSwitchWhenAvailable: true,
+            fundingSource: window.paypal.FUNDING.PAYPAL,
 
             createOrder() {
                 if (!document.getElementById("buyerEmail").value) {
