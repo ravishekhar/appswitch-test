@@ -62,10 +62,11 @@ async function createOrderHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const { cart, onCancelUrl, onApproveUrl } = request.body as {
+  const { cart, onCancelUrl, onApproveUrl, buyerEmail } = request.body as {
     cart: CartItem[];
-    onCancelUrl?: string;
-    onApproveUrl?: string;
+    buyerEmail: string;
+    onCancelUrl: string;
+    onApproveUrl: string;
   };
   const { itemsArray, itemTotal } = getItemsAndTotal(cart);
 
@@ -106,43 +107,23 @@ async function createOrderHandler(
           itemsArray /* Line item detail can be seen in the PayPal Checkout by clicking the amount in the upper-right, and is stored in the transaction record */,
 
         /* invoice_id: invoiceId,  /* Your own unique order #, will be indexed and stored as part of the transaction record and searchable in paypal.com account
-                                      (Must be unique, never used for an already *successful* transaction in the receiving account;
-                                      payment attempts with the invoice_id of a previously successful transaction are blocked to prevent accidental repeat payment for same thing) */
+                                                                              (Must be unique, never used for an already *successful* transaction in the receiving account;
+                                                                              payment attempts with the invoice_id of a previously successful transaction are blocked to prevent accidental repeat payment for same thing) */
 
         // custom_id: "any-arbitrary-metadata-value",  /* Not indexed nor searchable, but value will be returned in all API or webhook responses and visible in the transaction record of *receiving* PayPal account */
       },
     ],
-
-    /*
     payment_source: {
       paypal: {
+        email_address: buyerEmail,
         experience_context: {
-          // If there are no tangible items to be shipped as part of the transaction, you can specify NO_SHIPPING to not collect the payer's shipping address
-          // shipping_preference: "NO_SHIPPING",
-
-          // If after the payer's approval at PayPal you are *not* going to capture the Order ID immediately, but rather show final review step(s),
-          // set the user_action to CONTINUE (default with JS SDK approval is PAY_NOW). This is a cosmetic change to the wording of the last button at PayPal,
-          // so that it reads according to the action your integration performs on return.
-          // In summary: if CONTINUE is set here, your onApprove callback should proceed to your own review step that *requires a user action* before capture.
-          // user_action: "CONTINUE",
+          return_url: onApproveUrl,
+          cancel_url: onCancelUrl,
+          shipping_preference: "GET_FROM_FILE",
         },
       },
     },
-    */
-  }; //as CreateOrderRequestBody; //cast needed for payment_source.paypal with paypal-js@5.1.4
-
-  if (onCancelUrl) {
-    // **Important** : Validate these URLs against an allowed list of URLs.
-    // Never Trust any input from Web URLs
-    orderPayload.application_context = orderPayload.application_context || {};
-    orderPayload.application_context.cancel_url = onCancelUrl;
-  }
-  if (onApproveUrl) {
-    // **Important** : Validate these URLs against an allowed list of URLs.
-    // Never Trust any input from Web URLs
-    orderPayload.application_context = orderPayload.application_context || {};
-    orderPayload.application_context.return_url = onApproveUrl;
-  }
+  } as CreateOrderRequestBody; //cast needed for payment_source.paypal with paypal-js@5.1.4
 
   const orderResponse = await createOrder({
     body: orderPayload,
@@ -198,7 +179,7 @@ export async function createOrderController(fastify: FastifyInstance) {
     schema: {
       body: {
         type: "object",
-        required: ["cart"],
+        required: ["cart", "buyerEmail", "onApproveUrl", "onCancelUrl"],
         properties: {
           cart: {
             type: "array",
@@ -210,6 +191,9 @@ export async function createOrderController(fastify: FastifyInstance) {
                 quantity: { type: "number" },
               },
             },
+          },
+          buyerEmail: {
+            type: "string",
           },
           onApproveUrl: { type: "string" },
           onCancelUrl: { type: "string" },
