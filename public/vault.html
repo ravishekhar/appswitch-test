@@ -164,7 +164,7 @@
         });
 
         if (buttons.hasReturned()) {
-            resultMessage(`<h1>Resume flow. Buttons will not be rendered</h1>`);
+            resultMessage(`<h1>Resume flow.</h1><h2>Buttons will not be rendered in resume flow. </h2><h2>You can restart by going back to Home page and restart.</h2>`);
             buttons.resume();
         } else {
             buttons.render("#paypal-button-container");
