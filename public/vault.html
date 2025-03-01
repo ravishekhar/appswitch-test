@@ -10,8 +10,8 @@
 </head>
 <body>
 <nav><a href="/">Home</a></nav>
-<h1>PayPal Checkout</h1>
-<p>This example only does a GET on order at the end of flow.</p>
+<h1>PayPal Vaulting Flow</h1>
+<p>This example only does a GET on vault at the end of flow.</p>
 <h3>Buyer Email required as MPE</h3>
 <p><input required="true" type="email" placeholder="Buyer Email MPE" id="buyerEmail"/></p>
 <div id="messages"></div>
@@ -49,12 +49,12 @@
     loadPayPalSDK().then(() => {
         const buttons = window.paypal.Buttons({
 
-            createOrder() {
+            createVaultSetupToken() {
                 if (!document.getElementById("buyerEmail").value) {
                     resultMessage("Buyer email must be provided")
                     return;
                 }
-                return fetch("/api/paypal/create-order", {
+                return fetch("/api/paypal/create-vault-setup-token", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -63,21 +63,6 @@
                         buyerEmail: document.getElementById("buyerEmail").value,
                         onApproveUrl: window.location.href,
                         onCancelUrl: window.location.href,
-                        cart: [
-                            {
-                                sku: "1blwyeo8",
-                                quantity: 2,
-                            },
-                            {
-                                sku: "i5b1g92y",
-                                quantity: 1,
-                            },
-                            // uncomment the following to force an order creation error (negative amount on product)
-                            // {
-                            //   sku: "xyw5kd7k",
-                            //   quantity: 1,
-                            // },
-                        ],
                     }),
                 })
                     .then((response) => response.json())
@@ -114,7 +99,7 @@
                 console.log("Buyer Approved", data);
 
                 // You can also use capture order here. This example only uses GET Order.
-                return fetch(`/api/paypal/get-order?orderID=${data.orderID}`, {
+                return fetch(`/api/paypal/get-vault-setup-token?vaultSetupToken=${data.vaultSetupToken}`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",

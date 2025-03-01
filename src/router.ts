@@ -11,6 +11,10 @@ import {
   iosAppLinkController,
   redirectBackToAppController,
 } from "./controller/app-association-controller";
+import {
+  createVaultSetupTokenController,
+  getVaultSetupTokenController,
+} from "./controller/vault-controller";
 
 export default async function router(fastify: FastifyInstance) {
   setErrorHandler(fastify);
@@ -18,6 +22,8 @@ export default async function router(fastify: FastifyInstance) {
   fastify.register(captureOrderController, { prefix: "/api/paypal" });
   fastify.register(configController, { prefix: "/api/paypal" });
   fastify.register(getOrderController, { prefix: "/api/paypal" });
+  fastify.register(createVaultSetupTokenController, { prefix: "/api/paypal" });
+  fastify.register(getVaultSetupTokenController, { prefix: "/api/paypal" });
   fastify.register(androidAppLinkController);
   fastify.register(iosAppLinkController);
   fastify.register(redirectBackToAppController);
