@@ -1,175 +1,219 @@
 <html>
-<head>
-    <meta charset="UTF-8"/>
+  <head>
+    <meta charset="UTF-8" />
     <title>PayPal Buttons Demo</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <script src="https://unpkg.com/@paypal/paypal-js@5.1.4/dist/iife/paypal-js.min.js"></script>
-</head>
-<body>
-<nav><a href="/">Home</a></nav>
-<h1>PayPal Vaulting Flow</h1>
-<p>This example only does a GET on vault at the end of flow.</p>
-<h3>Buyer Email required as MPE</h3>
-<p><input required="true" type="email" placeholder="Buyer Email MPE" id="buyerEmail"/></p>
-<div id="messages"></div>
-<div id="paypal-button-container" style="max-width: 440px"></div>
-<script>
-    function loadPayPalSDK() {
-        return fetch("/api/paypal/client-config")
-            .then((response) => response.json())
-            .then(({clientID, webBaseUrl, currency, intent}) => {
-                return paypalLoadScript({
-                    // Supported query parameters: https://developer.paypal.com/sdk/js/configuration/#link-queryparameters
-                    "client-id": clientID,
-                    sdkBaseURL: `${webBaseUrl}/sdk/js`,
-                    intent: intent?.toLowerCase(),
-                    currency: currency,
-                    // "enable-funding": "venmo", // Venmo button will only render to payers with a US IP and currency=USD transactions
-                    // "buyer-country": "US", // Simulate a different geographic IP to see which buttons will display there. May only be used in sandbox mode.
-                    // "locale": "en_US", // Render buttons in a different language--by default the browser language is detected and used.
-                });
-            });
-    }
+  </head>
+  <body>
+    <nav><a href="/">Home</a></nav>
+    <h1>PayPal Vaulting Flow</h1>
+    <p>This example only does a GET on vault at the end of flow.</p>
+    <h3>Buyer Email required as MPE</h3>
+    <p>
+      <input
+        style="width: 100%"
+        required="true"
+        type="email"
+        placeholder="Buyer Email MPE"
+        id="buyerEmail"
+      />
+    </p>
+    <script>
+      window.addEventListener("load", () => {
+        const inputElement = document.getElementById("buyerEmail");
+        const storedValue = localStorage.getItem("paypal_buyerEmail");
+        if (storedValue) {
+          inputElement.value = storedValue;
+        }
 
-    // Example function to show a result to the user. Your site's UI library can be used instead,
-    // however alert() should not be used as it will interrupt the JS SDK window
-    function resultMessage(message, options = {hideButtons: false}) {
-        const buttonContainer = document.getElementById("paypal-button-container");
+        // Save value to localStorage on input change
+        inputElement.addEventListener("input", function () {
+          localStorage.setItem("paypal_buyerEmail", inputElement.value);
+        });
+      });
+    </script>
+    <div id="messages"></div>
+    <div id="paypal-button-container" style="max-width: 440px"></div>
+    <script>
+      function loadPayPalSDK() {
+        return fetch("/api/paypal/client-config")
+          .then((response) => response.json())
+          .then(({ clientID, webBaseUrl, currency, intent, environment }) => {
+            resultMessage(`<h1>Environment: ${environment}</h1>`);
+            return paypalLoadScript({
+              // Supported query parameters: https://developer.paypal.com/sdk/js/configuration/#link-queryparameters
+              "client-id": clientID,
+              sdkBaseURL: `${webBaseUrl}/sdk/js`,
+              intent: intent?.toLowerCase(),
+              currency: currency,
+              // "enable-funding": "venmo", // Venmo button will only render to payers with a US IP and currency=USD transactions
+              // "buyer-country": "US", // Simulate a different geographic IP to see which buttons will display there. May only be used in sandbox mode.
+              // "locale": "en_US", // Render buttons in a different language--by default the browser language is detected and used.
+            });
+          });
+      }
+
+      // Example function to show a result to the user. Your site's UI library can be used instead,
+      // however alert() should not be used as it will interrupt the JS SDK window
+      function resultMessage(message, options = { hideButtons: false }) {
+        const buttonContainer = document.getElementById(
+          "paypal-button-container"
+        );
         if (options.hideButtons) buttonContainer.style.display = "none";
 
         const messages = document.getElementById("messages");
         const p = document.createElement("p");
         p.innerHTML = message;
         messages.appendChild(p);
-    }
+      }
 
-    loadPayPalSDK().then(() => {
+      loadPayPalSDK().then(() => {
         const buttons = window.paypal.Buttons({
-            appSwitchWhenAvailable: true,
-            fundingSource: window.paypal.FUNDING.PAYPAL,
-            createVaultSetupToken() {
-                if (!document.getElementById("buyerEmail").value) {
-                    resultMessage("Buyer email must be provided")
-                    return;
-                }
-                return fetch("/api/paypal/create-vault-setup-token", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        buyerEmail: document.getElementById("buyerEmail").value,
-                        onApproveUrl: window.location.href,
-                        onCancelUrl: window.location.href,
-                    }),
-                })
-                    .then((response) => response.json())
-                    .then((orderData) => {
-                        if (orderData?.id) {
-                            return orderData.id;
-                        } else {
-                            console.error(
-                                {callback: "createOrder", serverResponse: orderData},
-                                JSON.stringify(orderData, null, 2)
-                            );
-                            // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
-                            const errorDetail = orderData?.details?.[0];
-                            resultMessage(
-                                `Could not initiate PayPal Checkout...<br><br>${
-                                    errorDetail?.issue || ""
-                                } ${
-                                    errorDetail?.description || orderData?.message || ""
-                                } ` +
-                                (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
-                                {hideButtons: true}
-                            );
-                        }
-                    })
-                    .catch((error) => {
-                        resultMessage(`Create Order Failed ${error.message}`)
-                        throw new Error(
-                            `createOrder callback failed - ${error.message}`
-                        );
-                    });
-            },
-            onApprove(data, actions) {
-                // For demo purposes:
-                console.log("Buyer Approved", data);
-
-                // You can also use capture order here. This example only uses GET Order.
-                return fetch(`/api/paypal/get-vault-setup-token?vaultSetupToken=${data.vaultSetupToken}`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                })
-                    .then((response) => response.json())
-                    .then((orderData) => {
-                        // Three cases to handle:
-                        //   (1) Recoverable INSTRUMENT_DECLINED -> call actions.restart(). This example does not cover this
-                        //   (2) Other non-recoverable errors -> Show a failure message
-                        //   (3) Successful transaction -> Show confirmation or thank you
-
-                        const errorDetail = orderData?.details?.[0];
-
-                        if (errorDetail) {
-                            // Any other error (non-recoverable)
-                            console.error({
-                                callback: "onApprove",
-                                response: orderData,
-                            });
-                            // Display a clear failure message informing the user the transaction failed.
-                            resultMessage(
-                                `Sorry, your transaction could not be processed. <br><br>${
-                                    errorDetail?.description || ""
-                                } (${orderData?.debug_id || ""})`,
-                                {hideButtons: true}
-                            );
-                        } else {
-                            // Show a success message to the payer somewhere on this page...
-                            resultMessage(
-                                `<h3>Thank you for approving. Here is the order details. (In ideal world merchant should not expose complete GET order information)</h3><pre>${JSON.stringify(
-                                    orderData,
-                                    null,
-                                    4
-                                )}</pre>`,
-                                {hideButtons: true}
-                            );
-
-                            // For demo purposes:
-                            console.log(
-                                "Get result",
-                                orderData,
-                                JSON.stringify(orderData, null, 2)
-                            );
-                        }
-                    });
-            },
-            onError(error) {
+          appSwitchWhenAvailable: true,
+          fundingSource: window.paypal.FUNDING.PAYPAL,
+          createVaultSetupToken() {
+            if (!document.getElementById("buyerEmail").value) {
+              resultMessage("Buyer email must be provided");
+              return;
+            }
+            return fetch("/api/paypal/create-vault-setup-token", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                buyerEmail: document.getElementById("buyerEmail").value,
+                onApproveUrl: window.location.href,
+                onCancelUrl: window.location.href,
+              }),
+            })
+              .then((res) => {
                 resultMessage(
-                    `<h3>An Error has occurred</h3> <p>${JSON.stringify(error)}</p>`
+                  `<p>Get Vault Setup Token Debug id: ${res.headers.get(
+                    "debug-id"
+                  )}</p>`
                 );
-                console.error({
-                    callback: "onError",
-                    errorObject: error,
-                });
-            },
-            onCancel(data) {
-                // For demo purposes:
-                console.log("Buyer Cancelled", data);
-            },
+                return res.json();
+              })
+              .then((orderData) => {
+                if (orderData?.id) {
+                  return orderData.id;
+                } else {
+                  console.error(
+                    { callback: "createOrder", serverResponse: orderData },
+                    JSON.stringify(orderData, null, 2)
+                  );
+                  // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
+                  const errorDetail = orderData?.details?.[0];
+                  resultMessage(
+                    `Could not initiate PayPal Checkout...<br><br>${
+                      errorDetail?.issue || ""
+                    } ${
+                      errorDetail?.description || orderData?.message || ""
+                    } ` +
+                      (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
+                    { hideButtons: true }
+                  );
+                }
+              })
+              .catch((error) => {
+                resultMessage(`Create Order Failed ${error.message}`);
+                throw new Error(
+                  `createOrder callback failed - ${error.message}`
+                );
+              });
+          },
+          onApprove(data, actions) {
+            // For demo purposes:
+            console.log("Buyer Approved", data);
+
+            // You can also use capture order here. This example only uses GET Order.
+            return fetch(
+              `/api/paypal/get-vault-setup-token?vaultSetupToken=${data.vaultSetupToken}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            )
+              .then((res) => {
+                resultMessage(
+                  `<p>Create Vault Setup Token Debug id: ${res.headers.get(
+                    "debug-id"
+                  )}</p>`
+                );
+                return res.json();
+              })
+              .then((orderData) => {
+                // Three cases to handle:
+                //   (1) Recoverable INSTRUMENT_DECLINED -> call actions.restart(). This example does not cover this
+                //   (2) Other non-recoverable errors -> Show a failure message
+                //   (3) Successful transaction -> Show confirmation or thank you
+
+                const errorDetail = orderData?.details?.[0];
+
+                if (errorDetail) {
+                  // Any other error (non-recoverable)
+                  console.error({
+                    callback: "onApprove",
+                    response: orderData,
+                  });
+                  // Display a clear failure message informing the user the transaction failed.
+                  resultMessage(
+                    `Sorry, your transaction could not be processed. <br><br>${
+                      errorDetail?.description || ""
+                    } (${orderData?.debug_id || ""})`,
+                    { hideButtons: true }
+                  );
+                } else {
+                  // Show a success message to the payer somewhere on this page...
+                  resultMessage(
+                    `<h3>Thank you for approving. Here is the order details. (In ideal world merchant should not expose complete GET order information)</h3><pre>${JSON.stringify(
+                      orderData,
+                      null,
+                      4
+                    )}</pre>`,
+                    { hideButtons: true }
+                  );
+
+                  // For demo purposes:
+                  console.log(
+                    "Get result",
+                    orderData,
+                    JSON.stringify(orderData, null, 2)
+                  );
+                }
+              });
+          },
+          // onError(error) {
+          //     resultMessage(
+          //         `<h3>An Error has occurred</h3> <p>${JSON.stringify(error)}</p>`
+          //     );
+          //     console.error({
+          //         callback: "onError",
+          //         errorObject: error,
+          //     });
+          // },
+          onCancel(data) {
+            // For demo purposes:
+            console.log("Buyer Cancelled", data);
+          },
         });
 
         if (buttons.hasReturned()) {
-            resultMessage(`<h1>Resume flow.</h1><h2>Buttons will not be rendered in resume flow. </h2><h2>You can restart by going back to Home page and restart.</h2>`);
-            buttons.resume();
+          resultMessage(
+            `<h1>Resume flow.</h1><h2>Buttons will not be rendered in resume flow. </h2><h2>You can restart by going back to Home page and restart.</h2>`
+          );
+          buttons.resume();
         } else {
-            buttons.render("#paypal-button-container");
+          buttons.render("#paypal-button-container");
         }
-    });
-</script>
-</body>
+      });
+    </script>
+  </body>
 </html>

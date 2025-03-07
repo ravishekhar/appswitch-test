@@ -29,6 +29,7 @@ type GetOrderOptions = {
 
 interface GetOrderResponseSuccess extends OrderResponseSuccess {
   data: OrderResponseBody;
+  paypalCorrelationId?: string | null;
   httpStatusCode: GetHTTPStatusCodeSuccessResponse;
 }
 
@@ -65,6 +66,7 @@ export default async function getOrder({
       return {
         status: "ok",
         data: data,
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         httpStatusCode: response.status as GetHTTPStatusCodeSuccessResponse,
       };
     } else {
@@ -72,6 +74,7 @@ export default async function getOrder({
 
       return {
         status: "error",
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         data: data as OrderErrorResponse,
         httpStatusCode: response.status,
       };

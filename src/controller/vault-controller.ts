@@ -51,7 +51,10 @@ async function createOrderHandler(
     request.log.error(orderResponse.data, "failed to create order");
   }
 
-  reply.code(orderResponse.httpStatusCode as number).send(orderResponse.data);
+  reply
+    .code(orderResponse.httpStatusCode as number)
+    .header("debug-id", orderResponse.paypalCorrelationId)
+    .send(orderResponse.data);
 }
 
 export async function createVaultSetupTokenController(
@@ -83,9 +86,11 @@ async function getVaultSetupTokenHandler(
   reply: FastifyReply
 ) {
   const { vaultSetupToken } = request.query as { vaultSetupToken: string };
-  const { data } = await getVaultSetupToken({ vaultSetupToken });
+  const { data, paypalCorrelationId } = await getVaultSetupToken({
+    vaultSetupToken,
+  });
   // Send only required data to web. This is a bad practice to send complete order response
-  reply.send(data);
+  reply.header("debug-id", paypalCorrelationId).send(data);
 }
 
 export async function getVaultSetupTokenController(fastify: FastifyInstance) {

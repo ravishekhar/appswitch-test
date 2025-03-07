@@ -63,6 +63,7 @@ export default async function createOrder({
     if (response.ok) {
       return {
         status: "ok",
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         data:
           requestHeaders.Prefer === "return=minimal"
             ? (data as OrderResponseBodyMinimal)
@@ -74,6 +75,7 @@ export default async function createOrder({
       return {
         status: "error",
         data: data as OrderErrorResponse,
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         httpStatusCode: response.status,
       };
     }

@@ -132,7 +132,10 @@ async function createOrderHandler(
     request.log.error(orderResponse.data, "failed to create order");
   }
 
-  reply.code(orderResponse.httpStatusCode as number).send(orderResponse.data);
+  reply
+    .code(orderResponse.httpStatusCode as number)
+    .header("debug-id", orderResponse.paypalCorrelationId)
+    .send(orderResponse.data);
 }
 
 async function captureOrderHandler(
@@ -142,6 +145,7 @@ async function captureOrderHandler(
   const { orderID } = request.body as { orderID: string };
 
   const responseData = await captureOrder(orderID);
+  const { paypalCorrelationId } = responseData;
   const data = responseData?.data as OrderResponseBody;
   const transaction =
     data?.purchase_units?.[0]?.payments?.captures?.[0] ||
@@ -163,7 +167,10 @@ async function captureOrderHandler(
   }
 
   // Finally, forward a result back to the frontend 'onApprove' callback--always forward a result, since the frontend must handle success/failure display
-  reply.code(responseData.httpStatusCode as number).send(data);
+  reply
+    .code(responseData.httpStatusCode as number)
+    .header("debug-id", paypalCorrelationId)
+    .send(data);
 }
 
 export async function createOrderController(fastify: FastifyInstance) {
@@ -220,9 +227,9 @@ export async function captureOrderController(fastify: FastifyInstance) {
 //get order details
 async function getOrderHandler(request: FastifyRequest, reply: FastifyReply) {
   const { orderID } = request.query as { orderID: string };
-  const { data } = await getOrder({ orderID });
+  const { data, paypalCorrelationId } = await getOrder({ orderID });
   // Send only required data to web. This is a bad practice to send complete order response
-  reply.send(data);
+  reply.header("debug-id", paypalCorrelationId).send(data);
 }
 
 export async function getOrderController(fastify: FastifyInstance) {

@@ -22,6 +22,7 @@ function getConfig() {
   const env = PAYPAL_ENVIRONMENT_MODE?.toLowerCase() || "sandbox";
   return {
     paypal: {
+      environment: env,
       clientID:
         env === "sandbox" ? PAYPAL_SANDBOX_CLIENT_ID : PAYPAL_LIVE_CLIENT_ID,
       clientSecret:

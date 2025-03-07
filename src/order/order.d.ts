@@ -30,11 +30,13 @@ export interface OrderResponseSuccess {
 
 interface CreateCaptureOrderResponseSuccess extends OrderResponseSuccess {
   data: OrderResponseBodyMinimal | OrderResponseBody;
+  paypalCorrelationId?: string | null;
   httpStatusCode: CreateCaptureHTTPStatusCodeSuccessResponse;
 }
 
 export type OrderResponseError = {
   status: "error";
+  paypalCorrelationId?: string | null;
   data: OrderErrorResponse;
   httpStatusCode: Omit<number, HTTPStatusCodeSuccessResponse>;
 };

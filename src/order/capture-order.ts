@@ -101,6 +101,7 @@ async function captureOrderAPI({
     if (response.ok) {
       return {
         status: "ok",
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         data:
           requestHeaders.Prefer === "return=minimal"
             ? (data as OrderResponseBodyMinimal)
@@ -112,6 +113,7 @@ async function captureOrderAPI({
       return {
         status: "error",
         data: data as OrderErrorResponse,
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         httpStatusCode: response.status,
       };
     }

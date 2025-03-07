@@ -12,6 +12,7 @@ type CreateVaultSetupTokenResponse = {
   data: {
     id: string;
   };
+  paypalCorrelationId?: string | null;
   status: string;
   httpStatusCode: number;
 };
@@ -60,12 +61,14 @@ export default async function createVaultSetupToken({
     if (response.ok) {
       return {
         status: "ok",
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         data,
         httpStatusCode: response.status,
       } as unknown as CreateVaultSetupTokenResponse;
     } else {
       return {
         status: "error",
+        paypalCorrelationId: response.headers.get("paypal-debug-id"),
         data,
         httpStatusCode: response.status,
       } as unknown as CreateVaultSetupTokenResponse;
