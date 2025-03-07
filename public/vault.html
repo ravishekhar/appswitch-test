@@ -93,7 +93,7 @@
             })
               .then((res) => {
                 resultMessage(
-                  `<p>Get Vault Setup Token Debug id: ${res.headers.get(
+                  `<p>Create Vault Setup Token Debug id: ${res.headers.get(
                     "debug-id"
                   )}</p>`
                 );
@@ -121,7 +121,9 @@
                 }
               })
               .catch((error) => {
-                resultMessage(`Create Order Failed ${error.message}`);
+                resultMessage(
+                  `Create Vault Setup Token Failed ${error.message}`
+                );
                 throw new Error(
                   `createOrder callback failed - ${error.message}`
                 );
@@ -143,7 +145,7 @@
             )
               .then((res) => {
                 resultMessage(
-                  `<p>Create Vault Setup Token Debug id: ${res.headers.get(
+                  `<p>Get Vault Setup Token Debug id: ${res.headers.get(
                     "debug-id"
                   )}</p>`
                 );
