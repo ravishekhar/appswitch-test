@@ -23,6 +23,7 @@ function getConfig() {
   return {
     paypal: {
       environment: env,
+      enableOrderCapture: env === "sandbox",
       clientID:
         env === "sandbox" ? PAYPAL_SANDBOX_CLIENT_ID : PAYPAL_LIVE_CLIENT_ID,
       clientSecret:

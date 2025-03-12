@@ -11,7 +11,6 @@
   <body>
     <nav><a href="/">Home</a></nav>
     <h1>PayPal Checkout</h1>
-    <p>This example only does a GET on order at the end of flow.</p>
     <h3>Buyer Email required as MPE</h3>
     <p>
       <input
@@ -39,22 +38,40 @@
     <div id="messages"></div>
     <div id="paypal-button-container" style="max-width: 440px"></div>
     <script>
+      let shouldCapture = false;
+
       function loadPayPalSDK() {
         return fetch("/api/paypal/client-config")
           .then((response) => response.json())
-          .then(({ clientID, webBaseUrl, currency, intent, environment }) => {
-            resultMessage(`<h1>Environment: ${environment}</h1>`);
-            return paypalLoadScript({
-              // Supported query parameters: https://developer.paypal.com/sdk/js/configuration/#link-queryparameters
-              "client-id": clientID,
-              sdkBaseURL: `${webBaseUrl}/sdk/js`,
-              intent: intent?.toLowerCase(),
-              currency: currency,
-              // "enable-funding": "venmo", // Venmo button will only render to payers with a US IP and currency=USD transactions
-              // "buyer-country": "US", // Simulate a different geographic IP to see which buttons will display there. May only be used in sandbox mode.
-              // "locale": "en_US", // Render buttons in a different language--by default the browser language is detected and used.
-            });
-          });
+          .then(
+            ({
+              clientID,
+              webBaseUrl,
+              currency,
+              intent,
+              environment,
+              enableOrderCapture,
+            }) => {
+              resultMessage(
+                `<h1>Environment: ${environment}</h1> ${
+                  enableOrderCapture === true
+                    ? "<p>In Sandbox environment the testbed will <b>capture</b> the order</p>"
+                    : "<p>In Production environment the testbed will only do GET order. Any credit card authorizations should get reverted.</p>"
+                }`
+              );
+              shouldCapture = enableOrderCapture;
+              return paypalLoadScript({
+                // Supported query parameters: https://developer.paypal.com/sdk/js/configuration/#link-queryparameters
+                "client-id": clientID,
+                sdkBaseURL: `${webBaseUrl}/sdk/js`,
+                intent: intent?.toLowerCase(),
+                currency: currency,
+                // "enable-funding": "venmo", // Venmo button will only render to payers with a US IP and currency=USD transactions
+                // "buyer-country": "US", // Simulate a different geographic IP to see which buttons will display there. May only be used in sandbox mode.
+                // "locale": "en_US", // Render buttons in a different language--by default the browser language is detected and used.
+              });
+            }
+          );
       }
 
       // Example function to show a result to the user. Your site's UI library can be used instead,
@@ -69,6 +86,106 @@
         const p = document.createElement("p");
         p.innerHTML = message;
         messages.appendChild(p);
+      }
+
+      async function getOrder(data) {
+        resultMessage(
+          `<h2>onApprove callback received, loading the order information.</h2><pre>${JSON.stringify(
+            data
+          )}</pre>`
+        );
+        const res = await fetch(
+          `/api/paypal/get-order?orderID=${data.orderID}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        resultMessage(
+          `<p>Get Order Debug id: ${res.headers.get("debug-id")}</p>`
+        );
+        const orderData = await res.json();
+
+        // Show a success message to the payer somewhere on this page...
+        resultMessage(
+          `<h3>Thank you for approving. Here is the GET order details. (In ideal world merchant should not expose complete GET order information)</h3><pre>${JSON.stringify(
+            orderData,
+            null,
+            4
+          )}</pre>`,
+          { hideButtons: true }
+        );
+
+        // For demo purposes:
+        console.log(
+          "Get result",
+          orderData,
+          JSON.stringify(orderData, null, 2)
+        );
+        return orderData;
+      }
+
+      async function captureOrder(data) {
+        resultMessage(
+          `<h2>onApprove callback received, capturing the order.</h2><pre>${JSON.stringify(
+            data
+          )}</pre>`
+        );
+        const res = await fetch(`/api/paypal/capture-order`, {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        resultMessage(
+          `<p>Capture Order Debug id: ${res.headers.get("debug-id")}</p>`
+        );
+        const orderData = await res.json();
+
+        // Three cases to handle:
+        //   (1) Recoverable INSTRUMENT_DECLINED -> call actions.restart(). This example does not cover this
+        //   (2) Other non-recoverable errors -> Show a failure message
+        //   (3) Successful transaction -> Show confirmation or thank you
+
+        const errorDetail = orderData?.details?.[0];
+
+        if (errorDetail) {
+          // Any other error (non-recoverable)
+          console.error({
+            callback: "onApprove",
+            response: orderData,
+          });
+          // Display a clear failure message informing the user the transaction failed.
+          resultMessage(
+            `Sorry, your transaction could not be processed. <br><br>${
+              errorDetail?.description || ""
+            } (${orderData?.debug_id || ""})`,
+            { hideButtons: true }
+          );
+        } else {
+          // Show a success message to the payer somewhere on this page...
+          resultMessage(
+            `<h3>Thank you for approving. Here is the capture order details. (In ideal world merchant should not expose complete CAPTURE order information)</h3>`,
+            { hideButtons: true }
+          );
+          resultMessage(
+            `<p>Transaction ID: </p><span>${orderData?.purchase_units?.[0]?.payments?.captures?.[0]?.id}</span>`
+          );
+          resultMessage(`<pre>${JSON.stringify(orderData, null, 4)}</pre>`);
+
+          // For demo purposes:
+          console.log(
+            "Capture result",
+            orderData,
+            JSON.stringify(orderData, null, 2)
+          );
+        }
+        return orderData;
       }
 
       loadPayPalSDK().then(() => {
@@ -99,11 +216,6 @@
                     sku: "i5b1g92y",
                     quantity: 1,
                   },
-                  // uncomment the following to force an order creation error (negative amount on product)
-                  // {
-                  //   sku: "xyw5kd7k",
-                  //   quantity: 1,
-                  // },
                 ],
               }),
             })
@@ -141,76 +253,28 @@
                 );
               });
           },
-          onApprove(data, actions) {
+          onApprove: async function (data, actions) {
             // For demo purposes:
             console.log("Buyer Approved", data);
 
-            // You can also use capture order here. This example only uses GET Order.
-            return fetch(`/api/paypal/get-order?orderID=${data.orderID}`, {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            })
-              .then((res) => {
-                resultMessage(
-                  `<p>Get Order Debug id: ${res.headers.get("debug-id")}</p>`
-                );
-                return res.json();
-              })
-              .then((orderData) => {
-                // Three cases to handle:
-                //   (1) Recoverable INSTRUMENT_DECLINED -> call actions.restart(). This example does not cover this
-                //   (2) Other non-recoverable errors -> Show a failure message
-                //   (3) Successful transaction -> Show confirmation or thank you
-
-                const errorDetail = orderData?.details?.[0];
-
-                if (errorDetail) {
-                  // Any other error (non-recoverable)
-                  console.error({
-                    callback: "onApprove",
-                    response: orderData,
-                  });
-                  // Display a clear failure message informing the user the transaction failed.
-                  resultMessage(
-                    `Sorry, your transaction could not be processed. <br><br>${
-                      errorDetail?.description || ""
-                    } (${orderData?.debug_id || ""})`,
-                    { hideButtons: true }
-                  );
-                } else {
-                  // Show a success message to the payer somewhere on this page...
-                  resultMessage(
-                    `<h3>Thank you for approving. Here is the order details. (In ideal world merchant should not expose complete GET order information)</h3><pre>${JSON.stringify(
-                      orderData,
-                      null,
-                      4
-                    )}</pre>`,
-                    { hideButtons: true }
-                  );
-
-                  // For demo purposes:
-                  console.log(
-                    "Get result",
-                    orderData,
-                    JSON.stringify(orderData, null, 2)
-                  );
-                }
-              });
+            // Capture only for sandbox environment.
+            if (shouldCapture) {
+              await captureOrder(data);
+            } else {
+              await getOrder(data);
+            }
           },
-          // onError(error) {
-          //     resultMessage(
-          //         `<h3>An Error has occurred</h3> <p>${JSON.stringify(error)}</p>`
-          //     );
-          //     console.error({
-          //         callback: "onError",
-          //         errorObject: error,
-          //     });
-          // },
+          onError(error) {
+            console.error({
+              callback: "onError",
+              errorObject: error,
+            });
+          },
           onCancel(data) {
             // For demo purposes:
             console.log("Buyer Cancelled", data);
+
+            resultMessage(`<h3>Buyer Cancelled</h3>`);
           },
         });
 

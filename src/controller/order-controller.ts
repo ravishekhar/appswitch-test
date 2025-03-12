@@ -13,7 +13,7 @@ import type {
 } from "@paypal/paypal-js";
 
 const {
-  paypal: { currency, intent },
+  paypal: { currency, intent, enableOrderCapture },
 } = config;
 
 type CartItem = {
@@ -143,6 +143,9 @@ async function captureOrderHandler(
   reply: FastifyReply
 ) {
   const { orderID } = request.body as { orderID: string };
+  if (!enableOrderCapture) {
+    throw new Error("Capture order is not enabled!");
+  }
 
   const responseData = await captureOrder(orderID);
   const { paypalCorrelationId } = responseData;
