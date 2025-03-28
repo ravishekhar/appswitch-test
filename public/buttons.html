@@ -21,7 +21,79 @@
         id="buyerEmail"
       />
     </p>
+    <div>
+      This button will create the order, so that the PayPal buttons can use a
+      pre-fetched order, instead of creating a new one
+      <p><button id="pre_create_order">Pre Fetch Order</button></p>
+    </div>
     <script>
+      let preFetchedOrderID = null;
+      const preCreateOrder = document.getElementById("pre_create_order");
+      preCreateOrder.addEventListener("click", async function () {
+        preCreateOrder.disabled = true;
+        preCreateOrder.innerHTML = "...Creating...";
+        preFetchedOrderID = await createOrderID();
+        preCreateOrder.disabled = false;
+        preCreateOrder.innerHTML = `Order ID Prefetched: ${preFetchedOrderID}. Click Again to create new one. Refresh to delete cached value.`;
+      });
+
+      function createOrderID() {
+        if (!document.getElementById("buyerEmail").value) {
+          resultMessage("Buyer email must be provided");
+          return;
+        }
+        return fetch("/api/paypal/create-order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            buyerEmail: document.getElementById("buyerEmail").value,
+            onApproveUrl: window.location.href,
+            onCancelUrl: window.location.href,
+            cart: [
+              {
+                sku: "1blwyeo8",
+                quantity: 2,
+              },
+              {
+                sku: "i5b1g92y",
+                quantity: 1,
+              },
+            ],
+          }),
+        })
+          .then((res) => {
+            resultMessage(
+              `<p>Create Order Debug id: ${res.headers.get("debug-id")}</p>`
+            );
+            return res.json();
+          })
+          .then((orderData) => {
+            if (orderData?.id) {
+              return orderData.id;
+            } else {
+              console.error(
+                { callback: "createOrder", serverResponse: orderData },
+                JSON.stringify(orderData, null, 2)
+              );
+              // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
+              const errorDetail = orderData?.details?.[0];
+              resultMessage(
+                `Could not initiate PayPal Checkout...<br><br>${
+                  errorDetail?.issue || ""
+                } ${errorDetail?.description || orderData?.message || ""} ` +
+                  (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
+                { hideButtons: true }
+              );
+            }
+          })
+          .catch((error) => {
+            resultMessage(`Create Order Failed ${error.message}`);
+            throw new Error(`createOrder callback failed - ${error.message}`);
+          });
+      }
+
       window.addEventListener("load", () => {
         const inputElement = document.getElementById("buyerEmail");
         const storedValue = localStorage.getItem("paypal_buyerEmail");
@@ -194,64 +266,11 @@
           fundingSource: window.paypal.FUNDING.PAYPAL,
 
           createOrder() {
-            if (!document.getElementById("buyerEmail").value) {
-              resultMessage("Buyer email must be provided");
-              return;
+            if (preFetchedOrderID) {
+              return preFetchedOrderID;
             }
-            return fetch("/api/paypal/create-order", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                buyerEmail: document.getElementById("buyerEmail").value,
-                onApproveUrl: window.location.href,
-                onCancelUrl: window.location.href,
-                cart: [
-                  {
-                    sku: "1blwyeo8",
-                    quantity: 2,
-                  },
-                  {
-                    sku: "i5b1g92y",
-                    quantity: 1,
-                  },
-                ],
-              }),
-            })
-              .then((res) => {
-                resultMessage(
-                  `<p>Create Order Debug id: ${res.headers.get("debug-id")}</p>`
-                );
-                return res.json();
-              })
-              .then((orderData) => {
-                if (orderData?.id) {
-                  return orderData.id;
-                } else {
-                  console.error(
-                    { callback: "createOrder", serverResponse: orderData },
-                    JSON.stringify(orderData, null, 2)
-                  );
-                  // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
-                  const errorDetail = orderData?.details?.[0];
-                  resultMessage(
-                    `Could not initiate PayPal Checkout...<br><br>${
-                      errorDetail?.issue || ""
-                    } ${
-                      errorDetail?.description || orderData?.message || ""
-                    } ` +
-                      (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
-                    { hideButtons: true }
-                  );
-                }
-              })
-              .catch((error) => {
-                resultMessage(`Create Order Failed ${error.message}`);
-                throw new Error(
-                  `createOrder callback failed - ${error.message}`
-                );
-              });
+
+            return createOrderID();
           },
           onApprove: async function (data, actions) {
             // For demo purposes:

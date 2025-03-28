@@ -22,6 +22,13 @@
         id="buyerEmail"
       />
     </p>
+    <div>
+      This button will create the order, so that the PayPal buttons can use a
+      pre-fetched order, instead of creating a new one
+      <p>
+        <button id="pre_create_order">Pre Fetch Vault Setup Token ID</button>
+      </p>
+    </div>
     <script>
       window.addEventListener("load", () => {
         const inputElement = document.getElementById("buyerEmail");
@@ -39,6 +46,64 @@
     <div id="messages"></div>
     <div id="paypal-button-container" style="max-width: 440px"></div>
     <script>
+      let preFetchedTokenID = null;
+      const preCreateOrder = document.getElementById("pre_create_order");
+      preCreateOrder.addEventListener("click", async function () {
+        preCreateOrder.disabled = true;
+        preCreateOrder.innerHTML = "...Creating...";
+        preFetchedTokenID = await createVaultSetupTokenID();
+        preCreateOrder.disabled = false;
+        preCreateOrder.innerHTML = `Vault Setup Token ID Prefetched: ${preFetchedTokenID}. Click Again to create new one. Refresh to delete cached value.`;
+      });
+
+      function createVaultSetupTokenID() {
+        if (!document.getElementById("buyerEmail").value) {
+          resultMessage("Buyer email must be provided");
+          return;
+        }
+        return fetch("/api/paypal/create-vault-setup-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            buyerEmail: document.getElementById("buyerEmail").value,
+            onApproveUrl: window.location.href,
+            onCancelUrl: window.location.href,
+          }),
+        })
+          .then((res) => {
+            resultMessage(
+              `<p>Create Vault Setup Token Debug id: ${res.headers.get(
+                "debug-id"
+              )}</p>`
+            );
+            return res.json();
+          })
+          .then((orderData) => {
+            if (orderData?.id) {
+              return orderData.id;
+            } else {
+              console.error(
+                { callback: "createOrder", serverResponse: orderData },
+                JSON.stringify(orderData, null, 2)
+              );
+              // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
+              const errorDetail = orderData?.details?.[0];
+              resultMessage(
+                `Could not initiate PayPal Checkout...<br><br>${
+                  errorDetail?.issue || ""
+                } ${errorDetail?.description || orderData?.message || ""} ` +
+                  (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
+                { hideButtons: true }
+              );
+            }
+          })
+          .catch((error) => {
+            resultMessage(`Create Vault Setup Token Failed ${error.message}`);
+            throw new Error(`createOrder callback failed - ${error.message}`);
+          });
+      }
       function loadPayPalSDK() {
         return fetch("/api/paypal/client-config")
           .then((response) => response.json())
@@ -76,58 +141,10 @@
           appSwitchWhenAvailable: true,
           fundingSource: window.paypal.FUNDING.PAYPAL,
           createVaultSetupToken() {
-            if (!document.getElementById("buyerEmail").value) {
-              resultMessage("Buyer email must be provided");
-              return;
+            if (preFetchedTokenID) {
+              return preFetchedTokenID;
             }
-            return fetch("/api/paypal/create-vault-setup-token", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                buyerEmail: document.getElementById("buyerEmail").value,
-                onApproveUrl: window.location.href,
-                onCancelUrl: window.location.href,
-              }),
-            })
-              .then((res) => {
-                resultMessage(
-                  `<p>Create Vault Setup Token Debug id: ${res.headers.get(
-                    "debug-id"
-                  )}</p>`
-                );
-                return res.json();
-              })
-              .then((orderData) => {
-                if (orderData?.id) {
-                  return orderData.id;
-                } else {
-                  console.error(
-                    { callback: "createOrder", serverResponse: orderData },
-                    JSON.stringify(orderData, null, 2)
-                  );
-                  // (Optional) The following hides the button container and shows a message about why checkout can't be initiated
-                  const errorDetail = orderData?.details?.[0];
-                  resultMessage(
-                    `Could not initiate PayPal Checkout...<br><br>${
-                      errorDetail?.issue || ""
-                    } ${
-                      errorDetail?.description || orderData?.message || ""
-                    } ` +
-                      (orderData?.debug_id ? `(${orderData.debug_id})` : ""),
-                    { hideButtons: true }
-                  );
-                }
-              })
-              .catch((error) => {
-                resultMessage(
-                  `Create Vault Setup Token Failed ${error.message}`
-                );
-                throw new Error(
-                  `createOrder callback failed - ${error.message}`
-                );
-              });
+            return createVaultSetupTokenID();
           },
           onApprove(data, actions) {
             // For demo purposes:
