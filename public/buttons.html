@@ -42,6 +42,8 @@
           resultMessage("Buyer email must be provided");
           return;
         }
+        const currentUrl = new URL(window.location.href);
+        currentUrl.hash = "";
         return fetch("/api/paypal/create-order", {
           method: "POST",
           headers: {
@@ -49,8 +51,8 @@
           },
           body: JSON.stringify({
             buyerEmail: document.getElementById("buyerEmail").value,
-            onApproveUrl: window.location.href,
-            onCancelUrl: window.location.href,
+            onApproveUrl: currentUrl.href,
+            onCancelUrl: currentUrl.href,
             cart: [
               {
                 sku: "1blwyeo8",
