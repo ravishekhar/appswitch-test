@@ -28,6 +28,7 @@ async function createOrderHandler(
         usage_type: "MERCHANT",
         customer_type: "CONSUMER",
         experience_context: {
+          user_action: "PAY_NOW",
           shipping_preference: "NO_SHIPPING",
           payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
           brand_name: "EXAMPLE INC",

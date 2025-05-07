@@ -112,6 +112,7 @@ async function createOrderHandler(
       paypal: {
         email_address: buyerEmail,
         experience_context: {
+          user_action: "PAY_NOW",
           return_url: onApproveUrl,
           cancel_url: onCancelUrl,
           shipping_preference: "NO_SHIPPING",
