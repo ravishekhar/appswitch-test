@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <script src="https://unpkg.com/@paypal/paypal-js@5.1.4/dist/iife/paypal-js.min.js"></script>
+    <script src="https://unpkg.com/@paypal/paypal-js@8.2.0/dist/iife/paypal-js.min.js"></script>
   </head>
   <body>
     <nav><a href="/">Home</a></nav>
@@ -22,13 +22,6 @@
         id="buyerEmail"
       />
     </p>
-    <div>
-      This button will create the order, so that the PayPal buttons can use a
-      pre-fetched order, instead of creating a new one
-      <p>
-        <button id="pre_create_order">Pre Fetch Vault Setup Token ID</button>
-      </p>
-    </div>
     <script>
       window.addEventListener("load", () => {
         const inputElement = document.getElementById("buyerEmail");
@@ -46,16 +39,6 @@
     <div id="messages"></div>
     <div id="paypal-button-container" style="max-width: 440px"></div>
     <script>
-      let preFetchedTokenID = null;
-      const preCreateOrder = document.getElementById("pre_create_order");
-      preCreateOrder.addEventListener("click", async function () {
-        preCreateOrder.disabled = true;
-        preCreateOrder.innerHTML = "...Creating...";
-        preFetchedTokenID = await createVaultSetupTokenID();
-        preCreateOrder.disabled = false;
-        preCreateOrder.innerHTML = `Vault Setup Token ID Prefetched: ${preFetchedTokenID}. Click Again to create new one. Refresh to delete cached value.`;
-      });
-
       function createVaultSetupTokenID() {
         if (!document.getElementById("buyerEmail").value) {
           resultMessage("Buyer email must be provided");
@@ -114,9 +97,9 @@
             return paypalLoadScript({
               // Supported query parameters: https://developer.paypal.com/sdk/js/configuration/#link-queryparameters
               "client-id": clientID,
-              sdkBaseURL: `${webBaseUrl}/sdk/js`,
               intent: intent?.toLowerCase(),
               currency: currency,
+              environment: environment === "live" ? "production" : "sandbox",
               // "enable-funding": "venmo", // Venmo button will only render to payers with a US IP and currency=USD transactions
               // "buyer-country": "US", // Simulate a different geographic IP to see which buttons will display there. May only be used in sandbox mode.
               // "locale": "en_US", // Render buttons in a different language--by default the browser language is detected and used.
@@ -143,9 +126,6 @@
           appSwitchWhenAvailable: true,
           fundingSource: window.paypal.FUNDING.PAYPAL,
           createVaultSetupToken() {
-            if (preFetchedTokenID) {
-              return preFetchedTokenID;
-            }
             return createVaultSetupTokenID();
           },
           onApprove(data, actions) {
