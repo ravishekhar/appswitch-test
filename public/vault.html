@@ -21,6 +21,7 @@
         placeholder="Buyer Email MPE"
         id="buyerEmail"
       />
+      <button>Update</button>
     </p>
     <script>
       window.addEventListener("load", () => {
@@ -33,6 +34,15 @@
         // Save value to localStorage on input change
         inputElement.addEventListener("input", function () {
           localStorage.setItem("paypal_buyerEmail", inputElement.value);
+          if (window.paypalButtons && window.paypalButtons.close) {
+            window.paypalButtons.close();
+            window.paypalButtons = null;
+            resultMessage("Buttons will render after updating email address");
+          }
+        });
+
+        inputElement.addEventListener("blur", function () {
+          location.reload();
         });
       });
     </script>
@@ -215,6 +225,7 @@
         } else {
           buttons.render("#paypal-button-container");
         }
+        window.paypalButtons = buttons;
       });
     </script>
   </body>
