@@ -124,8 +124,8 @@
               resultMessage(
                 `<h1>Environment: ${environment}</h1> ${
                   enableOrderCapture === true
-                    ? "<p>In Sandbox environment the testbed will <b>capture</b> the order</p>"
-                    : "<p>In Production environment the testbed will only do GET order. Any credit card authorizations should get reverted.</p>"
+                    ? "<p><strong>The testbed will <b>CAPTURE</b> the order. </strong></p>"
+                    : "<p>The testbed will only do GET order. Any credit card authorizations should get reverted.</p>"
                 }`
               );
               shouldCapture = enableOrderCapture;
