@@ -230,8 +230,8 @@
         resultMessage(
           `<h1>Environment: ${environment}</h1> ${
             enableOrderCapture === true
-              ? "<p><strong>The testbed will <b>CAPTURE</b> the order. </strong></p>"
-              : "<p>The testbed will only do GET order. Any credit card authorizations should get reverted.</p>"
+              ? "<p><strong>The testbed will VAULT the Buyer's Wallet using Create payment token API</strong></p>"
+              : "<p>The testbed will only do GET on Vault Setup Token (No actual vault). Any credit card authorizations should get reverted.</p>"
           }`
         );
         const { idToken } = await fetch("/api/paypal/generate-id-token").then(
