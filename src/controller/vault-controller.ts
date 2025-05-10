@@ -5,6 +5,7 @@ import createVaultSetupToken, {
   CreateVaultSetupTokenRequestBody,
 } from "../vault/create-vault-setup-token";
 import getVaultSetupToken from "../vault/get-vault-setup-token";
+import { executeVaultSetupToken } from "../vault/capture-vault-setup-token";
 
 async function createOrderHandler(
   request: FastifyRequest,
@@ -99,6 +100,34 @@ export async function getVaultSetupTokenController(fastify: FastifyInstance) {
     method: "GET",
     url: "/get-vault-setup-token",
     handler: getVaultSetupTokenHandler,
+    schema: {
+      querystring: {
+        vaultSetupToken: { type: "string" },
+      },
+    },
+  });
+}
+
+//get order details
+async function executeVaultSetupTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const { vaultSetupToken } = request.query as { vaultSetupToken: string };
+  const { data, paypalCorrelationId } = await executeVaultSetupToken({
+    vaultSetupToken,
+  });
+  // Send only required data to web. This is a bad practice to send complete order response
+  reply.header("debug-id", paypalCorrelationId).send(data);
+}
+
+export async function executeVaultSetupTokenController(
+  fastify: FastifyInstance
+) {
+  fastify.route({
+    method: "POST",
+    url: "/execute-vault-setup-token",
+    handler: executeVaultSetupTokenHandler,
     schema: {
       querystring: {
         vaultSetupToken: { type: "string" },
