@@ -11,7 +11,6 @@
   <body>
     <nav><a href="/">Home</a></nav>
     <h1>PayPal Vaulting Flow</h1>
-    <p>This example only does a GET on vault at the end of flow.</p>
     <h3>Buyer Email required as MPE</h3>
     <p>
       <input
@@ -275,7 +274,6 @@
             // For demo purposes:
             console.log("Buyer Approved", data);
 
-            // You can also use capture order here. This example only uses GET Order.
             if (shouldCapture) {
               captureVaultSetupToken(data.vaultSetupToken);
             } else {
