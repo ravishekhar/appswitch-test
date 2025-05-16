@@ -110,7 +110,7 @@ async function createOrderHandler(
     ],
     payment_source: {
       paypal: {
-        email_address: buyerEmail,
+        ...(buyerEmail && { email_address: buyerEmail }),
         experience_context: {
           user_action: "PAY_NOW",
           return_url: onApproveUrl,
@@ -185,7 +185,7 @@ export async function createOrderController(fastify: FastifyInstance) {
     schema: {
       body: {
         type: "object",
-        required: ["cart", "buyerEmail", "onApproveUrl", "onCancelUrl"],
+        required: ["cart", "onApproveUrl", "onCancelUrl"],
         properties: {
           cart: {
             type: "array",

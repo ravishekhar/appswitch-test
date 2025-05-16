@@ -16,6 +16,7 @@ const {
   PAYPAL_INTENT,
   PAYPAL_API_BASE_URL,
   PAYPAL_WEB_BASE_URL,
+  ENABLE_CAPTURE,
 } = process.env;
 
 function getConfig() {
@@ -23,7 +24,7 @@ function getConfig() {
   return {
     paypal: {
       environment: env,
-      enableOrderCapture: true, // env === "sandbox",
+      enableOrderCapture: ENABLE_CAPTURE === "true",
       clientID:
         env === "sandbox" ? PAYPAL_SANDBOX_CLIENT_ID : PAYPAL_LIVE_CLIENT_ID,
       clientSecret:

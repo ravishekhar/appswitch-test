@@ -18,9 +18,7 @@ async function createOrderHandler(
   };
 
   const vaultSetupPayload: CreateVaultSetupTokenRequestBody = {
-    customer: {
-      email: buyerEmail,
-    },
+    customer: { ...(buyerEmail && { email: buyerEmail }) },
     payment_source: {
       paypal: {
         description: "Description for PayPal to be shown to PayPal payer",
@@ -69,7 +67,7 @@ export async function createVaultSetupTokenController(
     schema: {
       body: {
         type: "object",
-        required: ["buyerEmail", "onApproveUrl", "onCancelUrl"],
+        required: ["onApproveUrl", "onCancelUrl"],
         properties: {
           buyerEmail: {
             type: "string",

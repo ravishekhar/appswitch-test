@@ -11,7 +11,7 @@
   <body>
     <nav><a href="/">Home</a></nav>
     <h1>PayPal Vaulting Flow</h1>
-    <h3>Buyer Email required as MPE</h3>
+    <h3>Buyer Email <sup>optional</sup></h3>
     <p>
       <input
         style="width: 100%"
@@ -49,10 +49,6 @@
       });
 
       function createVaultSetupTokenID() {
-        if (!document.getElementById("buyerEmail").value) {
-          resultMessage("Buyer email must be provided");
-          return;
-        }
         const currentUrl = new URL(window.location.href);
         currentUrl.hash = "";
         return fetch("/api/paypal/create-vault-setup-token", {
@@ -258,9 +254,9 @@
         if (options.hideButtons) buttonContainer.style.display = "none";
 
         const messages = document.getElementById("messages");
-        const p = document.createElement("p");
-        p.innerHTML = message;
-        messages.appendChild(p);
+        const element = document.createElement("div");
+        element.innerHTML = message;
+        messages.appendChild(element);
       }
 
       loadPayPalSDK().then(() => {
