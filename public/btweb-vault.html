@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Braintree SDK + PayPal SDK v5 Vault Flow</title>
+    <style>
+        .container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        input, select, button {
+            display: block;
+            margin-bottom: 15px;
+            padding: 8px;
+            width: 100%;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main>
+            <h1>Braintree SDK + PayPal SDK v5</h1>
+            <p>This demo uses Braintree v3.119.0-paypal-appswitch.5 and PayPal v5 One-time Checkout Flow</p>
+            
+            <label>Enter a client token or tokenization key. Ex: sandbox_38y8txr8_9h5f3t735xfwwx63</label>
+            <input id="btAuthInput" value="sandbox_38y8txr8_9h5f3t735xfwwx63">
+            
+            <label for="currency">Select a currency</label>
+            <input id="currency" type="text" value="USD">
+            
+            <label for="email">Enter an Email:</label>
+            <input id="email" type="text" placeholder="example@example.com">
+            
+            <label for="ppJsSDKEnv">Select a PayPal SDK Url:</label>
+            <select id="ppJsSDKEnv">
+                <option value="https://www.paypal.com/sdk/js?">https://www.paypal.com/sdk/js?</option>
+                <option value="https://www.msmaster.qa.paypal.com/sdk/js?">https://www.msmaster.qa.paypal.com/sdk/js?</option>
+                <option value="https://www.sandbox.paypal.com/sdk/js?">https://www.sandbox.paypal.com/sdk/js?</option>
+            </select>
+            
+            <button id="renderButton">Render PayPal Button</button>
+            <p id="buttonMessage"></p>
+            
+            <div id="braintreeContainer">
+                <p>Enter braintree authorization</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Constants
+        const braintreeSDKVersion = "3.119.0-paypal-appswitch.5";
+        const _csrf = "csrf-token-value"; // This would normally come from the server
+        
+        // Environment and merchant data
+        const Environments = {
+            sandbox: "sandbox"
+        };
+        
+        const MerchantTypes = {
+            modoxBraintreeEnabled: "modoxBraintreeEnabled"
+        };
+        
+        function getMerchant({ environment, merchantType }) {
+            // This would normally fetch from a real API
+            return "merchant-id-123";
+        }
+        
+        const flows = {
+            "Vault Flow": {
+                amount: 10.0,
+                currency: "USD",
+                flow: "vault",
+                redirectUrl: "https://www.example.com/",
+                requestBillingAgreement: true,
+            }
+        };
+
+        // Script loader function
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                    resolve();
+                    return;
+                }
+                const script = document.createElement("script");
+                script.src = src;
+                script.addEventListener("load", () => resolve());
+                script.addEventListener("error", (e) => reject(e));
+                document.body.appendChild(script);
+            });
+        }
+
+        // DOM elements
+        const btAuthInput = document.getElementById('btAuthInput');
+        const renderButton = document.getElementById('renderButton');
+        const buttonMessage = document.getElementById('buttonMessage');
+        const braintreeContainer = document.getElementById('braintreeContainer');
+        const currencyInput = document.getElementById('currency');
+        const emailInput = document.getElementById('email');
+        const ppJsSdkEnvSelect = document.getElementById('ppJsSDKEnv');
+
+        // State variables
+        let btAuth = null;
+        let currentCurrency = "USD";
+        let currentEmail = "";
+        let currentPpJsSdkEnv = "https://www.paypal.com/sdk/js?";
+
+        // Event listeners
+        currencyInput.addEventListener('change', (event) => {
+            console.log("Changing currency to: ", event.target.value);
+            currentCurrency = event.target.value;
+        });
+
+        ppJsSdkEnvSelect.addEventListener('change', (event) => {
+            console.log("Changing PP JS SDK Env to: ", event.target.value);
+            currentPpJsSdkEnv = event.target.value;
+        });
+
+        emailInput.addEventListener('change', (event) => {
+            console.log("Setting email to: ", event.target.value);
+            currentEmail = event.target.value;
+        });
+
+        renderButton.addEventListener('click', renderPaypalCheckout);
+
+        function renderPaypalCheckout() {
+            console.log("Rendering Paypal Checkout");
+            btAuth = btAuthInput.value;
+            renderButton.setAttribute("disabled", "true");
+            buttonMessage.innerHTML = "Refresh Page to use a different authorization";
+            renderBraintree();
+        }
+
+        function renderBraintree() {
+            if (!btAuth) return;
+            
+            console.log("Rendering Braintree with: ", btAuth);
+
+            braintreeContainer.innerHTML = `
+                <div id="paypal-button" style="margin-top: 1rem"></div>
+                <p id="resultElement"></p>
+            `;
+
+            const resultElement = document.getElementById('resultElement');
+            
+            // Load the Braintree scripts
+            Promise.all([
+                loadScript(`https://js.braintreegateway.com/web/${braintreeSDKVersion}/js/client.js`),
+                loadScript(`https://js.braintreegateway.com/web/${braintreeSDKVersion}/js/paypal-checkout.js`)
+            ]).then(() => {
+                initializeBraintree();
+            }).catch(error => {
+                console.error("Error loading Braintree scripts:", error);
+                braintreeContainer.innerHTML = "Failed to load Braintree scripts.";
+            });
+            
+            function initializeBraintree() {
+                const environment = Environments.sandbox;
+                const merchantType = MerchantTypes.modoxBraintreeEnabled;
+                const merchantId = getMerchant({ environment, merchantType });
+                
+                const baseRequestOptions = {
+                    headers: {
+                        "X-CSRF-TOKEN": _csrf,
+                        "content-type": "application/json",
+                    },
+                    customerId: "",
+                    environment,
+                    merchantId,
+                    merchantType,
+                };
+                
+                let createPaymentOptions = {
+                    returnUrl: new URL(window.location.href),
+                    cancelUrl: new URL(window.location.href),
+                    appSwitchPreference: {
+                        launchPaypalApp: true,
+                    }
+                };
+                
+                let loadPPSDKOptions = {
+                    intent: "tokenize",
+                    currency: currentCurrency,
+                    vault: true,
+                };
+                
+                if (currentPpJsSdkEnv === "https://www.msmaster.qa.paypal.com/sdk/js?") {
+                    loadPPSDKOptions.env = "stage";
+                } else if (currentPpJsSdkEnv === "https://www.sandbox.paypal.com/sdk/js?") {
+                    loadPPSDKOptions.env = "sandbox";
+                }
+                
+                if (currentEmail) {
+                    console.log("adding emails");
+                    createPaymentOptions.userAuthenticationEmail = currentEmail;
+                    console.log(createPaymentOptions);
+                } else {
+                    console.log("not adding email");
+                }
+                
+                const flowName = "Vault Flow";
+                
+                window.braintree.client
+                    .create({ authorization: btAuth })
+                    .then((clientInstance) => {
+                        window.braintree.paypalCheckout
+                            .create({ client: clientInstance })
+                            .then((paypalCheckoutInstance) => {
+                                paypalCheckoutInstance.loadPayPalSDK(loadPPSDKOptions).then(() => {
+                                    const buttons = window.paypal.Buttons({
+                                        appSwitchWhenAvailable: true,
+                                        fundingSource: window.paypal.FUNDING.PAYPAL,
+                                        
+                                        createBillingAgreement: () => {
+                                            return paypalCheckoutInstance.createPayment({
+                                                ...flows[flowName],
+                                                ...createPaymentOptions,
+                                            });
+                                        },
+                                        onApprove: (data) => {
+                                            return paypalCheckoutInstance.tokenizePayment(
+                                                data,
+                                                (err, payload) => {
+                                                    if (err) {
+                                                        console.error("There was an error with tokenization: ", err);
+                                                        return;
+                                                    }
+                                                    resultElement.innerHTML = JSON.stringify(payload);
+                                                    console.log("Got a nonce payload: ", payload);
+                                                }
+                                            );
+                                        },
+                                        onCancel: (data) => {
+                                            console.log("Paypal Payment Cancelled: ", JSON.stringify(data, null, 2));
+                                        },
+                                        onError: (err) => {
+                                            console.error("PayPal Error: ", err);
+                                        },
+                                    });
+                                    
+                                    if (buttons.hasReturned && buttons.hasReturned()) {
+                                        buttons.resume();
+                                    } else {
+                                        buttons.render("#paypal-button");
+                                    }
+                                });
+                            })
+                            .catch((paypalCheckoutErr) => {
+                                console.error("There was an error creating PayPal Checkout: ", paypalCheckoutErr);
+                            });
+                    })
+                    .catch((clientErr) => {
+                        console.error("There was an error creating the Braintree Client: ", clientErr);
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
