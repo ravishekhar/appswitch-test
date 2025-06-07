@@ -267,10 +267,8 @@
             }
 
             let createPaymentOptions = {
-                // returnUrl: new URL(window.location.href),
-                // cancelUrl: new URL(window.location.href),
-                returnUrl: 'https://www.example.com',
-                cancelUrl: 'https://www.example.com',
+                returnUrl: new URL(window.location.href),
+                cancelUrl: new URL(window.location.href),
                 appSwitchPreference: {
                     launchPaypalApp: true,
                 },

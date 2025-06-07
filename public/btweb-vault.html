@@ -31,6 +31,16 @@
             
             <label>Enter a client token or tokenization key. Ex: sandbox_38y8txr8_9h5f3t735xfwwx63</label>
             <input id="btAuthInput" value="sandbox_38y8txr8_9h5f3t735xfwwx63">
+
+            <h4>
+            To see a transaction go through the full e2e flow, enter a public and
+            private key from a braintree gateway below to transact on the nonce
+            that is returned
+            </h4>
+            <label for="public-key">Enter Public key</label>
+            <input id="public-key" type="text" placeholder="public key" />
+            <label for="private-key">Enter Private key</label>
+            <input id="private-key" type="text" placeholder="private key" />
             
             <label for="currency">Select a currency</label>
             <input id="currency" type="text" value="USD">
@@ -106,6 +116,8 @@
         const currencyInput = document.getElementById('currency');
         const emailInput = document.getElementById('email');
         const ppJsSdkEnvSelect = document.getElementById('ppJsSDKEnv');
+        const publicKey = document.getElementById('public-key');
+        const privateKey = document.getElementById('private-key');
 
         // State variables
         let btAuth = null;
@@ -138,7 +150,42 @@
             buttonMessage.innerHTML = "Refresh Page to use a different authorization";
             renderBraintree();
         }
+        const transact = async (nonce) => {
+          const graphqlQuery = {
+              query: `mutation {
+                chargePaymentMethod(input: {
+                  paymentMethodId: "${nonce}", 
+                  transaction: {amount: "1.00"}
+                }) { 
+                  transaction {
+                    id 
+                    status
+                  } 
+                }
+              }`
+            };
+          const priv = privateKey.value
+          const pub =  publicKey.value
 
+          const response = await fetch('https://payments.sandbox.braintree-api.com/graphql', {
+            method: 'POST',
+            headers: {
+              'Authorization': btoa(pub + ":" + priv),
+              'Braintree-version': '2023-07-03',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(graphqlQuery)
+            // body: '{"query": "mutation {createClientToken{ clientToken }}"}'
+          })
+          console.log(response)
+          // const trans = await response.json()
+          // if(clientToken.errors[0].extensions.errorClass === "AUTHENTICATION") {
+          //   alert("Enter GraphQL Authorization")
+          // }
+
+          // return clientToken.data.createClientToken.clientToken
+          // alert(JSON.stringify(trans))
+        }
         function renderBraintree() {
             if (!btAuth) return;
             
@@ -234,6 +281,7 @@
                                                         return;
                                                     }
                                                     resultElement.innerHTML = JSON.stringify(payload);
+                                                    transact(payload.nonce)
                                                     console.log("Got a nonce payload: ", payload);
                                                 }
                                             );
