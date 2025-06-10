@@ -95,14 +95,14 @@
 
         const flows = {
             "1 time checkout": {
-                amount: 1.0,
+                amount: 0.25,
                 currency: "USD",
                 flow: "checkout",
                 intent: "capture",
                 redirectUrl: "https://www.example.com/",
             },
             "Vault Flow": {
-                amount: 1.0,
+                amount: 0.25,
                 currency: "USD",
                 flow: "vault",
                 redirectUrl: "https://www.example.com/",
@@ -187,41 +187,40 @@
             renderBraintreeComponent();
         }
 
-        const transact = async (nonce) => {
+        const transact = async (nonce, environment) => {
+          let url = environment === 'sandbox' ? 'https://payments.sandbox.braintree-api.com/graphql' : 'https://payments.braintree-api.com/graphql'
           const graphqlQuery = {
-              query: `mutation {
-                chargePaymentMethod(input: {
-                  paymentMethodId: "${nonce}", 
-                  transaction: {amount: "1.00"}
+            query: `mutation {
+              chargePaymentMethod(input: {
+                paymentMethodId: "${nonce}",
+                transaction: {amount: "0.25"}
                 }) { 
                   transaction {
                     id 
                     status
-                  } 
-                }
-              }`
-            };
-          const priv = privateKey.value
-          const pub =  publicKey.value
+                    legacyId
+                    merchantAccountId
+                    orderId
+                    }
+                    }
+                    }`
+                  };
+                  const priv = privateKey.value
+                  const pub =  publicKey.value
 
-          const response = await fetch('https://payments.sandbox.braintree-api.com/graphql', {
+          const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Authorization': btoa(pub + ":" + priv),
-              'Braintree-version': '2023-07-03',
+              'Authorization': `Basic ${btoa(pub + ":" + priv)}`,
+              'Braintree-version': '2025-06-03',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(graphqlQuery)
-            // body: '{"query": "mutation {createClientToken{ clientToken }}"}'
           })
           console.log(response)
-          // const trans = await response.json()
-          // if(clientToken.errors[0].extensions.errorClass === "AUTHENTICATION") {
-          //   alert("Enter GraphQL Authorization")
-          // }
+          const txn = await response.json()
+          console.log(txn)
 
-          // return clientToken.data.createClientToken.clientToken
-          // alert(JSON.stringify(trans))
         }
 
         function renderBraintreeComponent() {
@@ -315,6 +314,7 @@
                         );
                         return;
                     }
+                    const environment = clientInstance.getConfiguration().gatewayConfiguration.environment
 
                     window.braintree.paypalCheckout
                         .create({ client: clientInstance })
@@ -350,9 +350,8 @@
                                                     );
                                                     return;
                                                 }
-
                                                 resultElement.innerHTML = JSON.stringify(payload);
-                                                transact(payload.nonce)
+                                                transact(payload.nonce, environment)
                                                 console.log("Got a nonce payload: ", payload);
                                             }
                                         );

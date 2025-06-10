@@ -85,7 +85,7 @@
         
         const flows = {
             "Vault Flow": {
-                amount: 10.0,
+                amount: 0.25,
                 currency: "USD",
                 flow: "vault",
                 redirectUrl: "https://www.example.com/",
@@ -150,16 +150,19 @@
             buttonMessage.innerHTML = "Refresh Page to use a different authorization";
             renderBraintree();
         }
-        const transact = async (nonce) => {
+        const transact = async (nonce, environment) => {
+          let url = environment === 'sandbox' ? 'https://payments.sandbox.braintree-api.com/graphql' : 'https://payments.braintree-api.com/graphql'
           const graphqlQuery = {
               query: `mutation {
                 chargePaymentMethod(input: {
                   paymentMethodId: "${nonce}", 
-                  transaction: {amount: "1.00"}
+                  transaction: {amount: "0.25"}
                 }) { 
                   transaction {
                     id 
                     status
+                    legacyId
+                    merchantAccountId
                   } 
                 }
               }`
@@ -167,24 +170,19 @@
           const priv = privateKey.value
           const pub =  publicKey.value
 
-          const response = await fetch('https://payments.sandbox.braintree-api.com/graphql', {
+          const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Authorization': btoa(pub + ":" + priv),
-              'Braintree-version': '2023-07-03',
+              'Authorization': `Basic ${btoa(pub + ":" + priv)}`,
+              'Braintree-version': '2025-06-03',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(graphqlQuery)
-            // body: '{"query": "mutation {createClientToken{ clientToken }}"}'
           })
-          console.log(response)
-          // const trans = await response.json()
-          // if(clientToken.errors[0].extensions.errorClass === "AUTHENTICATION") {
-          //   alert("Enter GraphQL Authorization")
-          // }
 
-          // return clientToken.data.createClientToken.clientToken
-          // alert(JSON.stringify(trans))
+          const txn = await response.json()
+          console.log(txn)
+
         }
         function renderBraintree() {
             if (!btAuth) return;
@@ -258,6 +256,7 @@
                 window.braintree.client
                     .create({ authorization: btAuth })
                     .then((clientInstance) => {
+                        const environment = clientInstance.getConfiguration().gatewayConfiguration.environment
                         window.braintree.paypalCheckout
                             .create({ client: clientInstance })
                             .then((paypalCheckoutInstance) => {
@@ -281,7 +280,7 @@
                                                         return;
                                                     }
                                                     resultElement.innerHTML = JSON.stringify(payload);
-                                                    transact(payload.nonce)
+                                                    transact(payload.nonce, environment)
                                                     console.log("Got a nonce payload: ", payload);
                                                 }
                                             );
