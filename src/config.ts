@@ -17,6 +17,12 @@ const {
   PAYPAL_API_BASE_URL,
   PAYPAL_WEB_BASE_URL,
   ENABLE_CAPTURE,
+  SANDBOX_TOKENIZATION_KEY,
+  PRODUCTION_TOKENIZATION_KEY,
+  SANDBOX_PUBLIC_KEY,
+  PRODUCTION_PUBLIC_KEY,
+  SANDBOX_PRIVATE_KEY,
+  PRODUCTION_PRIVATE_KEY,
 } = process.env;
 
 function getConfig() {
@@ -38,6 +44,9 @@ function getConfig() {
           ? "https://api-m.sandbox.paypal.com"
           : "https://api-m.paypal.com",
       webBaseUrl: PAYPAL_WEB_BASE_URL || "https://www.paypal.com",
+      braintreeTokenizationKey: env === "sandbox" ? SANDBOX_TOKENIZATION_KEY : PRODUCTION_TOKENIZATION_KEY,
+      braintreePublicKey: env === "sandbox" ? SANDBOX_PUBLIC_KEY : PRODUCTION_PUBLIC_KEY,
+      braintreePrivateKey: env === "sandbox" ? SANDBOX_PRIVATE_KEY : PRODUCTION_PRIVATE_KEY,
     },
   };
 }

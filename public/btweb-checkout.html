@@ -1,369 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Braintree SDK + PayPal SDK v5 Checkout Flow</title>
     <style>
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      main {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-      }
-      label,
-      input,
-      button,
-      select {
-        display: block;
-        margin-bottom: 5px;
-      }
-      input,
-      select {
-        padding: 8px;
-        width: 100%;
-        max-width: 400px;
-      }
-      button {
-        padding: 10px;
-        background-color: #0070f3;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        max-width: 200px;
-      }
-      button:disabled {
-        background-color: #cccccc;
-        cursor: not-allowed;
-      }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        label,
+        input,
+        button,
+        select {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input,
+        select {
+            padding: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            max-width: 200px;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
-  </head>
-  <body>
+    <script src="https://js.braintreegateway.com/web/3.119.0-paypal-appswitch.5/js/client.js"></script>
+    <script src="https://js.braintreegateway.com/web/3.119.0-paypal-appswitch.5/js/paypal-checkout.js"></script>
+</head>
+
+<body>
     <div class="container">
-      <main>
-        <h1>Braintree SDK + PayPal SDK v5</h1>
-        <p>
-          This demo uses Braintree v3.119.0-paypal-appswitch.5 and PayPal v5
-          One-time Checkout Flow
-        </p>
-        <label>
-          Enter a client token or tokenization key. Ex:
-          sandbox_38y8txr8_9h5f3t735xfwwx63
-        </label>
-        <input id="btAuthInput" value="sandbox_38y8txr8_9h5f3t735xfwwx63" />
-        <h4>
-          To see a transaction go through the full e2e flow, enter a public and
-          private key from a braintree gateway below to transact on the nonce
-          that is returned
-        </h4>
-        <label for="public-key">Enter Public key</label>
-        <input id="public-key" type="text" placeholder="public key" />
-        <label for="private-key">Enter Private key</label>
-        <input id="private-key" type="text" placeholder="private key" />
-        <label for="currency">Enter a Currency:</label>
-        <input id="currency" type="text" value="USD" />
-        <label for="email">Enter an Email:</label>
-        <input id="email" type="text" placeholder="example@example.com" />
-        <label for="ppJsSDKEnv">Select a PayPal SDK Url:</label>
-        <select id="ppJsSDKEnv">
-          <option value="https://www.paypal.com/sdk/js?">
-            https://www.paypal.com/sdk/js?
-          </option>
-          <option value="https://www.msmaster.qa.paypal.com/sdk/js?">
-            https://www.msmaster.qa.paypal.com/sdk/js?
-          </option>
-          <option value="https://www.sandbox.paypal.com/sdk/js?">
-            https://www.sandbox.paypal.com/sdk/js?
-          </option>
-        </select>
-        <button id="renderButtonRef">Render PayPal Button</button>
-        <p id="buttonMessageRef"></p>
-        <div id="braintreeContainer">
-          <p>Enter braintree authorization</p>
-        </div>
-      </main>
+        <main>
+            <h1>Braintree SDK + PayPal SDK v5</h1>
+            <p>
+                This demo uses Braintree v3.119.0-paypal-appswitch.5 and PayPal v5
+                One-time Checkout Flow
+            </p>
+            <div id="paypal-button"></div>
+            <div id="result"></div>
+        </main>
     </div>
 
     <script>
         // Constants
         const braintreeSDKVersion = "3.119.0-paypal-appswitch.5";
 
-        const flows = {
-            "1 time checkout": {
-                amount: 0.25,
-                currency: "USD",
-                flow: "checkout",
-                intent: "capture",
-                redirectUrl: "https://www.example.com/",
-            },
-            "Vault Flow": {
-                amount: 0.25,
-                currency: "USD",
-                flow: "vault",
-                redirectUrl: "https://www.example.com/",
-                returnUrl: "https://www.example.com/return",
-                cancelUrl: "https://www.example.com/cancel",
-            },
+        const getConfig = async () => {
+            const response = await fetch("/api/paypal/client-config");
+            const data = await response.json();
+            console.log(`Environment: ${data.environment}`);
+            return data;
         };
-
-        // Environment and merchant details
-        const Environments = {
-            sandbox: "sandbox"
-        };
-
-        const MerchantTypes = {
-            modoxBraintreeEnabled: "modoxBraintreeEnabled"
-        };
-
-        function getMerchant({ environment, merchantType }) {
-            // Mock implementation - in a real app this would have more logic
-            return "merchant123";
-        }
-
-        // Element references
-        const btAuthInput = document.getElementById('btAuthInput');
-        const renderButtonRef = document.getElementById('renderButtonRef');
-        const buttonMessageRef = document.getElementById('buttonMessageRef');
-        const currencyInput = document.getElementById('currency');
-        const emailInput = document.getElementById('email');
-        const ppJsSdkEnvSelect = document.getElementById('ppJsSDKEnv');
-        const braintreeContainer = document.getElementById('braintreeContainer');
-        const publicKey = document.getElementById('public-key');
-        const privateKey = document.getElementById('private-key');
-
-        // State variables
-        let btAuth = null;
-        let renderBraintree = false;
-        let currentFlow = "1 time checkout";
-        let resultElement = null;
-
-        // Script loader function
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector(`script[src="${src}"]`)) {
-                    resolve();
-                    return;
-                }
-                const script = document.createElement("script");
-                script.src = src;
-                script.addEventListener("load", () => {
-                    resolve();
-                });
-                script.addEventListener("error", (error) => {
-                    reject(error);
-                });
-                document.body.appendChild(script);
-            });
-        }
-
-        // Event handlers
-        currencyInput.addEventListener('change', (event) => {
-            console.log("Changing currency to: ", event.target.value);
-        });
-
-        emailInput.addEventListener('change', (event) => {
-            console.log("Setting email to: ", event.target.value);
-        });
-
-        ppJsSdkEnvSelect.addEventListener('change', (event) => {
-            console.log("Changing PP JS SDK Env to: ", event.target.value);
-        });
-
-        renderButtonRef.addEventListener('click', () => {
-            renderPaypalCheckout();
-        });
-
-        function renderPaypalCheckout() {
-            console.log("Rendering Paypal Checkout");
-            btAuth = btAuthInput.value;
-            renderBraintree = true;
-            renderButtonRef.setAttribute("disabled", "true");
-            buttonMessageRef.innerHTML = "Refresh Page to use a different authorization";
-            renderBraintreeComponent();
-        }
-
-        const transact = async (nonce, environment) => {
-          let url = environment === 'sandbox' ? 'https://payments.sandbox.braintree-api.com/graphql' : 'https://payments.braintree-api.com/graphql'
-          const graphqlQuery = {
-            query: `mutation {
-              chargePaymentMethod(input: {
-                paymentMethodId: "${nonce}",
-                transaction: {amount: "0.25"}
-                }) { 
-                  transaction {
-                    id 
-                    status
-                    legacyId
-                    merchantAccountId
-                    orderId
-                    }
-                    }
-                    }`
-                  };
-                  const priv = privateKey.value
-                  const pub =  publicKey.value
-
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${btoa(pub + ":" + priv)}`,
-              'Braintree-version': '2025-06-03',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(graphqlQuery)
-          })
-          console.log(response)
-          const txn = await response.json()
-          console.log(txn)
-
-        }
-
-        function renderBraintreeComponent() {
-            if (!btAuth) return;
-
-            console.log("Rendering Braintree with: ", btAuth);
-
-            braintreeContainer.innerHTML = `
-                <div id="paypal-button" style="margin-top: 1rem"></div>
-                <p id="resultRef"></p>
-            `;
-
-            resultElement = document.getElementById('resultRef');
-
-            const currency = currencyInput.value;
-            const email = emailInput.value;
-            const ppJsSdkEnv = ppJsSdkEnvSelect.value;
-
-            const environment = Environments.sandbox;
-            const merchantType = MerchantTypes.modoxBraintreeEnabled;
-            const merchantId = getMerchant({ environment, merchantType });
-
-            // Load scripts and initialize Braintree
-            Promise.all([
-                loadScript(`https://js.braintreegateway.com/web/${braintreeSDKVersion}/js/client.js`),
-                loadScript(`https://js.braintreegateway.com/web/${braintreeSDKVersion}/js/paypal-checkout.js`)
-            ]).then(() => {
-                initializeBraintree(btAuth, currency, ppJsSdkEnv, email, {
-                    environment,
-                    merchantType,
-                    merchantId
-                });
-            }).catch(error => {
-                console.error("Error loading Braintree scripts:", error);
-                braintreeContainer.innerHTML = '<div>Error loading Braintree scripts</div>';
-            });
-        }
-
-        function initializeBraintree(authorization, currency, ppJsSdkEnv, mpe, merchantDetails) {
-            if (!authorization) {
-                braintreeContainer.innerHTML = '<div>Loading...</div>';
-                return;
-            }
-
-            let createPaymentOptions = {
-                returnUrl: new URL(window.location.href),
-                cancelUrl: new URL(window.location.href),
+        getConfig().then((config) => {
+            const flows = {
+                "1 time checkout": {
+                    amount: 0.25,
+                    currency: "USD",
+                    flow: "checkout",
+                    intent: "capture",
+                    redirectUrl: "https://www.example.com/",
+                },
+                "Vault Flow": {
+                    amount: 0.25,
+                    currency: "USD",
+                    flow: "vault",
+                    redirectUrl: "https://www.example.com/",
+                },
+            };
+            const createPaymentOptions = {
+                returnUrl: "https://www.example.com/",
+                cancelUrl: "https://www.example.com/",
+                // returnUrl: new URL(window.location.href),
+                // cancelUrl: new URL(window.location.href),
                 appSwitchPreference: {
                     launchPaypalApp: true,
                 },
-            };
-
-            let loadPPSDKOptions = {
-                intent: "capture",
-                currency: currency,
-            };
-
-            if (ppJsSdkEnv === "https://www.msmaster.qa.paypal.com/sdk/js?") {
-                loadPPSDKOptions.env = "stage";
-            } else if (ppJsSdkEnv === "https://www.sandbox.paypal.com/sdk/js?") {
-                loadPPSDKOptions.env = "sandbox";
             }
 
-            if (mpe) {
-                console.log("adding emails");
-                createPaymentOptions.userAuthenticationEmail = mpe;
-                console.log(createPaymentOptions);
-            } else {
-                console.log("not adding email");
-            }
+            // Element references
+            const braintreeContainer =
+                document.getElementById("braintreeContainer");
 
-            const baseRequestOptions = {
-                headers: {
-                    "X-CSRF-TOKEN": '', // _csrf not available in this context
-                    "content-type": "application/json",
-                },
-                customerId: "",
-                environment: merchantDetails.environment,
-                merchantId: merchantDetails.merchantId,
-                merchantType: merchantDetails.merchantType,
+            // State variables
+            let btAuth = config.braintreeTokenizationKey;
+            let currentFlow = "1 time checkout";
+            let resultElement = document.getElementById('result');
+
+            const transact = async (nonce) => {
+                let url =
+                    config.environment === "sandbox"
+                        ? "https://payments.sandbox.braintree-api.com/graphql"
+                        : "https://payments.braintree-api.com/graphql";
+                const graphqlQuery = {
+                    query: `mutation {
+                    chargePaymentMethod(input: {
+                        paymentMethodId: "${nonce}",
+                        transaction: {amount: "0.25"}
+                        }) {
+                            transaction {
+                                id
+                                status
+                                legacyId
+                                merchantAccountId
+                                orderId
+                                }
+                                }
+                                }`,
+                };
+                const priv = config.braintreePrivateKey;
+                const pub = config.braintreePublicKey;
+
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Basic ${btoa(pub + ":" + priv)}`,
+                        "Braintree-version": "2025-06-03",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(graphqlQuery),
+                });
+                const txn = await response.json();
+                console.log(txn);
             };
+            window.braintree.client.create({ authorization: btAuth })
+                .then((clientInstance) => {
+                    window.braintree.paypalCheckout.create({ client: clientInstance })
+                        .then((paypalCheckoutInstance) => {
+                            paypalCheckoutInstance.loadPayPalSDK({
+                                intent: "capture",
+                                currency: "USD",
+                            }).then(() => {
 
-            // Initialize Braintree client
-            window.braintree.client
-                .create({ authorization: authorization })
-                .then((clientInstance, clientErr) => {
-                    if (clientErr) {
-                        console.error(
-                            "There was an error creating the Braintree Client: ",
-                            clientErr
-                        );
-                        return;
-                    }
-                    const environment = clientInstance.getConfiguration().gatewayConfiguration.environment
-
-                    window.braintree.paypalCheckout
-                        .create({ client: clientInstance })
-                        .then((paypalCheckoutInstance, paypalCheckoutErr) => {
-                            if (paypalCheckoutErr) {
-                                console.error(
-                                    "There was an error creating PayPal Checkout: ",
-                                    paypalCheckoutErr
-                                );
-                                return;
-                            }
-
-                            paypalCheckoutInstance.loadPayPalSDK(loadPPSDKOptions).then(() => {
                                 const buttons = window.paypal.Buttons({
                                     appSwitchWhenAvailable: true,
                                     fundingSource: window.paypal.FUNDING.PAYPAL,
-
                                     createOrder: () => {
                                         return paypalCheckoutInstance.createPayment({
                                             ...flows[currentFlow],
                                             ...createPaymentOptions,
                                         });
                                     },
-
                                     onApprove: (data) => {
                                         return paypalCheckoutInstance.tokenizePayment(
                                             data,
                                             (err, payload) => {
                                                 if (err) {
-                                                    console.error(
-                                                        "There was an error with tokenization: ",
-                                                        err
-                                                    );
+                                                    console.error("There was an error with tokenization: ", err);
                                                     return;
                                                 }
                                                 resultElement.innerHTML = JSON.stringify(payload);
-                                                transact(payload.nonce, environment)
+                                                transact(payload.nonce)
                                                 console.log("Got a nonce payload: ", payload);
                                             }
                                         );
                                     },
-
                                     onCancel: (data) => {
-                                        console.log(
-                                            "Paypal Payment Cancelled: ",
-                                            JSON.stringify(data, null, 2)
-                                        );
+                                        console.log("Paypal Payment Cancelled: ", JSON.stringify(data, null, 2));
                                     },
-
                                     onError: (err) => {
                                         console.error("PayPal Error: ", err);
                                     },
@@ -375,9 +192,12 @@
                                     buttons.render("#paypal-button");
                                 }
                             });
-                        });
-                });
-        }
+                        })
+                })
+        })
+
+      ;
     </script>
-  </body>
+</body>
+
 </html>

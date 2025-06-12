@@ -9,6 +9,9 @@ const {
     intent,
     environment,
     enableOrderCapture,
+    braintreeTokenizationKey,
+    braintreePublicKey,
+    braintreePrivateKey
   },
 } = config;
 
@@ -23,6 +26,9 @@ export async function configController(fastify: FastifyInstance) {
         intent,
         environment,
         enableOrderCapture,
+        braintreeTokenizationKey,
+        braintreePublicKey,
+        braintreePrivateKey
       });
     }
   );
