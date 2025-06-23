@@ -114,22 +114,27 @@
                     config.environment === "sandbox"
                         ? "https://payments.sandbox.braintree-api.com/graphql"
                         : "https://payments.braintree-api.com/graphql";
-                const graphqlQuery = {
-                    query: `mutation {
-                    chargePaymentMethod(input: {
-                        paymentMethodId: "${nonce}",
-                        transaction: {amount: "0.25"}
-                        }) {
-                            transaction {
-                                id
-                                status
-                                legacyId
-                                merchantAccountId
-                                orderId
-                                }
-                                }
-                                }`,
-                };
+                let graphqlQuery = 
+                config.enableOrderCapture === true
+                    ? {
+                        query: `mutation {
+                        chargePaymentMethod(input: {
+                            paymentMethodId: "${nonce}",
+                            transaction: {amount: "0.25"}
+                            }) {
+                                transaction {
+                                    id
+                                    status
+                                    legacyId
+                                    merchantAccountId
+                                    orderId
+                                    }
+                                    }
+                                    }`,
+                      }
+                    : {
+                        query: `mutation { vaultPaymentMethod(input: {paymentMethodId: "${nonce}"}) {paymentMethod {id legacyId}}}`
+                }
                 const priv = config.braintreePrivateKey;
                 const pub = config.braintreePublicKey;
 
