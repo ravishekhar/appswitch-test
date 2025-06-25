@@ -70,6 +70,9 @@
         // Constants
         const braintreeSDKVersion = "3.119.0-paypal-appswitch.5";
 
+        const params = new URLSearchParams(window.location.search);
+        const mpe = params.get('userAuthenticationEmail');
+
         const getConfig = async () => {
             const response = await fetch("/api/paypal/client-config");
             const data = await response.json();
@@ -98,6 +101,10 @@
                 appSwitchPreference: {
                     launchPaypalApp: true,
                 },
+            }
+
+            if (mpe) {
+                createPaymentOptions.userAuthenticationEmail = mpe;
             }
 
             // Element references
