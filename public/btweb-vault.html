@@ -178,7 +178,7 @@
                                         });
                                     },
                                     onApprove: (data) => {
-					console.log('data from onApprove' ,data)
+					console.log('data from onApprove ', JSON.stringify(data))
                                         return paypalCheckoutInstance.tokenizePayment(
                                             data,
                                             (err, payload) => {
