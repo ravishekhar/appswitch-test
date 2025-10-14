@@ -116,6 +116,10 @@ async function createOrderHandler(
           return_url: onApproveUrl,
           cancel_url: onCancelUrl,
           shipping_preference: "NO_SHIPPING",
+          // Temp: adding this atribute to test a scenario, revert it after testing
+          app_switch_preference: {
+            launch_paypal_app: true
+          }
         },
       },
     },
